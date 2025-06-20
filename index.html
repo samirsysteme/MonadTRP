@@ -126,6 +126,38 @@
       cursor: pointer;
       margin-top: 20px;
     }
+    @media (max-width: 768px) {
+  /* تصميم خاص بالهاتف */
+  #overlay {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  input, select, button {
+    width: 100%;
+    font-size: 18px;
+  }
+
+  #playersList div {
+    display: block;
+    width: 100%;
+    margin: 8px 0;
+  }
+
+  #voteArea button {
+    width: 100%;
+    margin: 8px 0;
+    font-size: 18px;
+  }
+
+  #resultArea h2 {
+    font-size: 20px;
+  }
+}
+
   </style>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
