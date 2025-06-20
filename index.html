@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
-  <title>Truth or Trap - Game Modular</title>
+  <title>Truth or Trap - Game</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -60,7 +60,6 @@
       border-radius: 8px;
       background-color: #007bff;
       color: white;
-      cursor: pointer;
     }
     #voteArea button:hover:not(:disabled) {
       background-color: #0056b3;
@@ -128,31 +127,40 @@
       margin-top: 20px;
     }
     @media (max-width: 768px) {
-      #overlay {
-        padding: 10px;
-      }
-      h1 {
-        font-size: 22px;
-      }
-      input, select, button {
-        width: 100%;
-        font-size: 18px;
-      }
-      #playersList div {
-        display: block;
-        width: 100%;
-        margin: 8px 0;
-      }
-      #voteArea button {
-        width: 100%;
-        margin: 8px 0;
-        font-size: 18px;
-      }
-      #resultArea h2 {
-        font-size: 20px;
-      }
-    }
+  /* تصميم خاص بالهاتف */
+  #overlay {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  input, select, button {
+    width: 100%;
+    font-size: 18px;
+  }
+
+  #playersList div {
+    display: block;
+    width: 100%;
+    margin: 8px 0;
+  }
+
+  #voteArea button {
+    width: 100%;
+    margin: 8px 0;
+    font-size: 18px;
+  }
+
+  #resultArea h2 {
+    font-size: 20px;
+  }
+}
+
   </style>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
   <div id="overlay">
@@ -169,11 +177,11 @@
       </div>
       <div>
         <input type="text" id="playerName" placeholder="Your name" />
-        <button id="btnCreateRoom">Create Room</button>
+        <button onclick="createRoom()">Create Room</button>
       </div>
       <div>
         <input type="text" id="roomIDInput" placeholder="Room code" />
-        <button id="btnJoinRoom">Join</button>
+        <button onclick="joinRoom()">Join</button>
       </div>
     </div>
 
@@ -206,10 +214,7 @@
     <audio id="endSound" src="https://www.soundjay.com/buttons/sounds/beep-07.mp3" preload="auto"></audio>
   </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-
+<script>
   const firebaseConfig = {
     apiKey: "AIzaSyAv02neUyAXLklrx__3WrbO31OmqHSQiDk",
     authDomain: "truth-or-trap-game.firebaseapp.com",
@@ -219,8 +224,8 @@
     messagingSenderId: "989300391170",
     appId: "1:989300391170:web:b4ea01be707e63de29561b"
   };
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
   let roomID, playerName, players = {}, votes = {}, points = {}, liar = null,
       maxRounds = 30, roundNumber = 0, voteTimer = null, countdownInterval = null,
@@ -253,40 +258,45 @@
     return r;
   }
 
-  async function createRoom() {
+  function createRoom() {
     playerName = document.getElementById("playerName").value.trim();
     if (!playerName) return showToast("⚠️ Enter your name!");
     maxRounds = parseInt(document.getElementById("roundsSelect").value);
 
-    const tryCreate = async () => {
+    const tryCreate = () => {
       roomID = makeRoomID();
-      const snap = await get(ref(db, "rooms/" + roomID));
-      if (snap.exists()) return tryCreate();
-      players = {}; players[playerName] = true;
-      points = {}; points[playerName] = 0;
-      await set(ref(db, "rooms/" + roomID), {
-        players, points, roundNumber:0, maxRounds, gameStarted:false, votes:{}, revealed:null
+      db.ref("rooms/" + roomID).once("value").then(snap => {
+        if (snap.exists()) return tryCreate();
+        players = {}; players[playerName] = true;
+        points = {}; points[playerName] = 0;
+        db.ref("rooms/" + roomID).set({
+          players, points, roundNumber:0, maxRounds, gameStarted:false, votes:{}, revealed:null
+        }).then(() => {
+          showToast("✅ Room created!");
+          initAfterJoin();
+        });
       });
-      showToast("✅ Room created!");
-      initAfterJoin();
     };
     tryCreate();
   }
 
-  async function joinRoom() {
+  function joinRoom() {
     playerName = document.getElementById("playerName").value.trim();
     if (!playerName) return showToast("⚠️ Enter your name!");
     roomID = document.getElementById("roomIDInput").value.trim().toUpperCase();
-    const snap = await get(ref(db, "rooms/" + roomID + "/players"));
-    if (!snap.exists()) return showToast("❌ Room not found!");
-    players = snap.val();
-    players[playerName] = true;
-    const roomSnap = await get(ref(db, "rooms/" + roomID));
-    points = roomSnap.val().points || {};
-    points[playerName] = points[playerName] || 0;
-    await update(ref(db, "rooms/" + roomID), {players, points});
-    showToast("✅ Joined successfully!");
-    initAfterJoin();
+    db.ref("rooms/" + roomID + "/players").once("value").then(snap => {
+      if (!snap.exists()) return showToast("❌ Room not found!");
+      players = snap.val();
+      players[playerName] = true;
+      db.ref("rooms/" + roomID).once("value").then(data => {
+        points = data.val().points || {};
+        points[playerName] = points[playerName] || 0;
+        db.ref("rooms/" + roomID).update({players, points}).then(() => {
+          showToast("✅ Joined successfully!");
+          initAfterJoin();
+        });
+      });
+    });
   }
 
   function initAfterJoin() {
@@ -296,7 +306,7 @@
   }
 
   function listenRoom() {
-    onValue(ref(db, "rooms/" + roomID), (snap) => {
+    db.ref("rooms/" + roomID).on("value", snap => {
       const d = snap.val();
       if (!d) return;
       players = d.players || {};
@@ -348,7 +358,7 @@
     }
   }
 
-  async function startRound() {
+  function startRound() {
     if(Object.keys(players).length < 3) {
       return showToast("⚠️ Need at least 3 players!");
     }
@@ -358,7 +368,7 @@
     const li = Object.keys(players)[Math.floor(Math.random()*Object.keys(players).length)];
     const q = questions[Math.floor(Math.random()*questions.length)];
 
-    await update(ref(db, "rooms/" + roomID), {
+    db.ref("rooms/" + roomID).update({
       gameStarted: true,
       roundNumber: rn,
       question: q,
@@ -404,11 +414,11 @@
     tick();
   }
 
-  async function vote(who){
+  function vote(who){
     if(myVote) return;
     myVote = who;
     votes[who] = (votes[who]||0)+1;
-    await set(ref(db,"rooms/"+roomID+"/votes"), votes);
+    db.ref("rooms/"+roomID+"/votes").set(votes);
     showToast("✅ Voted for " + who);
 
     for(let p in players){
@@ -417,46 +427,47 @@
     }
   }
 
-  async function revealLiar(){
+  function revealLiar(){
     clearTimeout(voteTimer);
     clearInterval(countdownInterval);
 
-    const snap = await get(ref(db,"rooms/"+roomID));
-    const d = snap.val();
-    const v = d.votes || {};
-    const liar = d.liar;
-    let most = null, mx=0;
-    for(let p in v){
-      if(v[p]>mx){
-        mx = v[p];
-        most = p;
+    db.ref("rooms/"+roomID).once("value").then(snap=>{
+      const d = snap.val();
+      const v = d.votes || {};
+      const liar = d.liar;
+      let most = null, mx=0;
+      for(let p in v){
+        if(v[p]>mx){
+          mx = v[p];
+          most = p;
+        }
       }
-    }
-    const success = most === liar;
-    const pts = {...d.points};
-    if(success){
-      for(let p in v)
-        if(v[p]>0) pts[p] = (pts[p]||0)+1;
-    } else {
-      pts[liar] = (pts[liar]||0)+2;
-    }
-    const res = {liar, most, success};
-
-    await update(ref(db,"rooms/"+roomID), {
-      revealed: res,
-      points: pts,
-      gameStarted: false,
-    });
-
-    showResult(res);
-
-    setTimeout(()=>{
-      if(roundNumber < maxRounds){
-        startRound();
+      const success = most === liar;
+      const pts = {...d.points};
+      if(success){
+        for(let p in v)
+          if(v[p]>0) pts[p] = (pts[p]||0)+1;
       } else {
-        announceWinner();
+        pts[liar] = (pts[liar]||0)+2;
       }
-    }, 5000);
+      const res = {liar, most, success};
+
+      db.ref("rooms/"+roomID).update({
+        revealed: res,
+        points: pts,
+        gameStarted: false,
+      });
+
+      showResult(res);
+
+      setTimeout(()=>{
+        if(roundNumber < maxRounds){
+          startRound();
+        } else {
+          announceWinner();
+        }
+      }, 5000);
+    });
   }
 
   function showResult(res){
@@ -504,8 +515,6 @@
   }
 
   window.onload = () => {
-    document.getElementById("btnCreateRoom").onclick = createRoom;
-    document.getElementById("btnJoinRoom").onclick = joinRoom;
     document.getElementById("btnStart").onclick = startRound;
     const hash = location.hash.substring(1);
     if(hash) document.getElementById("roomIDInput").value = hash;
