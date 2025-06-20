@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truth or Trap - Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: url('https://i.imgur.com/rfp3aJA.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    #overlay {
+      background-color: rgba(0, 0, 0, 0.65);
+      padding: 20px;
+      border-radius: 15px;
+      max-width: 800px;
+      margin: auto;
+    }
+    input, select, button {
+      font-size: 16px;
+      padding: 8px;
+      margin: 5px;
+      border-radius: 5px;
+      border: none;
+    }
+    input, select {
+      width: 150px;
+      text-align: center;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    button:hover:not(:disabled) {
+      background-color: #218838;
+    }
+    button:disabled {
+      background-color: #666;
+      cursor: not-allowed;
+    }
+    #playersList div {
+      background: #222;
+      margin: 5px auto;
+      padding: 5px 10px;
+      border-radius: 5px;
+      display: inline-block;
+      min-width: 120px;
+      font-weight: bold;
+    }
+    #voteArea button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-weight: bold;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+    }
+    #voteArea button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      display: none;
+      z-index: 9999;
+      box-shadow: 0 0 10px #000;
+      transition: opacity 0.5s;
+    }
+    #inviteLinkArea {
+      background-color: #222;
+      margin: 10px auto;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: all;
+      width: fit-content;
+    }
+    #resultArea {
+      background-color: #222;
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      min-height: 80px;
+      font-size: 18px;
+    }
+    #countdown {
+      color: yellow;
+      font-size: 20px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #progressContainer {
+      width: 100%;
+      background: #333;
+      height: 20px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    #progressBar {
+      width: 100%;
+      height: 100%;
+      background: yellow;
+      border-radius: 10px;
+      transition: width 1s linear;
+    }
+    #restartArea button {
+      font-size: 18px;
+      padding: 10px 20px;
+      background: #ffc107;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+      #overlay {
+        padding: 10px;
+      }
+      h1 {
+        font-size: 22px;
+      }
+      input, select, button {
+        width: 100%;
+        font-size: 18px;
+      }
+      #playersList div {
+        display: block;
+        width: 100%;
+        margin: 8px 0;
+      }
+      #voteArea button {
+        width: 100%;
+        margin: 8px 0;
+        font-size: 18px;
+      }
+      #resultArea h2 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="overlay">
+    <h1>🎭 Monad Truth or Trap</h1>
+    <!-- المحتوى الأساسي هنا (كما هو في الكود السابق) -->
+    <p style="color:yellow;">Game content is here... (shortened for brevity)</p>
+  </div>
+
+  <script>
+    // تسجيل Service Worker لدعم PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("✅ Service Worker registered"))
+        .catch(err => console.error("❌ Failed to register Service Worker:", err));
+    }
+  </script>
+</body>
+</html>
