@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
-  <title>Truth or Trap - Game</title>
+  <title>Truth or Trap - Game Modular</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -11,9 +11,6 @@
       color: white;
       text-align: center;
       padding: 20px;
-      margin: 0;
-      min-height: 100vh;
-      box-sizing: border-box;
     }
     #overlay {
       background-color: rgba(0, 0, 0, 0.65);
@@ -21,10 +18,6 @@
       border-radius: 15px;
       max-width: 800px;
       margin: auto;
-      box-sizing: border-box;
-      transition: all 0.3s ease;
-      border: 5px solid transparent;
-      box-shadow: 0 0 20px transparent;
     }
     input, select, button {
       font-size: 16px;
@@ -32,7 +25,6 @@
       margin: 5px;
       border-radius: 5px;
       border: none;
-      box-sizing: border-box;
     }
     input, select {
       width: 150px;
@@ -60,7 +52,6 @@
       display: inline-block;
       min-width: 120px;
       font-weight: bold;
-      box-sizing: border-box;
     }
     #voteArea button {
       margin: 5px;
@@ -69,7 +60,7 @@
       border-radius: 8px;
       background-color: #007bff;
       color: white;
-      box-sizing: border-box;
+      cursor: pointer;
     }
     #voteArea button:hover:not(:disabled) {
       background-color: #0056b3;
@@ -104,7 +95,6 @@
       border-radius: 8px;
       min-height: 80px;
       font-size: 18px;
-      box-sizing: border-box;
     }
     #countdown {
       color: yellow;
@@ -118,7 +108,6 @@
       height: 20px;
       border-radius: 10px;
       margin-top: 10px;
-      box-sizing: border-box;
     }
     #progressBar {
       width: 100%;
@@ -137,29 +126,10 @@
       font-weight: bold;
       cursor: pointer;
       margin-top: 20px;
-      box-sizing: border-box;
-    }
-    #buttonsArea button {
-      font-size: 18px;
-      padding: 10px 20px;
-      background-color: #28a745;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 15px;
-      box-sizing: border-box;
-    }
-    #buttonsArea button:hover:not(:disabled) {
-      background-color: #218838;
     }
     @media (max-width: 768px) {
-      /* تصميم خاص بالهاتف */
       #overlay {
         padding: 10px;
-        max-width: 100%;
-        margin: 10px;
       }
       h1 {
         font-size: 22px;
@@ -183,8 +153,6 @@
       }
     }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
   <div id="overlay">
@@ -195,17 +163,17 @@
         <label for="roundsSelect">Number of rounds:</label>
         <select id="roundsSelect">
           <option value="5">5</option>
-          <option value="15">15</option>
+          <option value="10">10</option>
           <option value="30" selected>30</option>
         </select>
       </div>
       <div>
-        <input type="text" id="playerName" placeholder="Your name" autocomplete="off" />
-        <button onclick="createRoom()">Create Room</button>
+        <input type="text" id="playerName" placeholder="Your name" />
+        <button id="btnCreateRoom">Create Room</button>
       </div>
       <div>
-        <input type="text" id="roomIDInput" placeholder="Room code" autocomplete="off" />
-        <button onclick="joinRoom()">Join</button>
+        <input type="text" id="roomIDInput" placeholder="Room code" />
+        <button id="btnJoinRoom">Join</button>
       </div>
     </div>
 
@@ -226,11 +194,11 @@
 
     <div id="resultArea" style="display:none"></div>
 
-    <div id="buttonsArea" style="display:none;">
+    <div id="buttonsArea" style="display:none; margin-top: 15px;">
       <button id="btnStart">🚀 Start Round</button>
     </div>
 
-    <div id="restartArea" style="display:none;">
+    <div id="restartArea" style="display:none">
       <button onclick="location.reload()">🔄 Return to Start</button>
     </div>
 
@@ -238,7 +206,10 @@
     <audio id="endSound" src="https://www.soundjay.com/buttons/sounds/beep-07.mp3" preload="auto"></audio>
   </div>
 
-<script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
   const firebaseConfig = {
     apiKey: "AIzaSyAv02neUyAXLklrx__3WrbO31OmqHSQiDk",
     authDomain: "truth-or-trap-game.firebaseapp.com",
@@ -248,8 +219,8 @@
     messagingSenderId: "989300391170",
     appId: "1:989300391170:web:b4ea01be707e63de29561b"
   };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
   let roomID, playerName, players = {}, votes = {}, points = {}, liar = null,
       maxRounds = 30, roundNumber = 0, voteTimer = null, countdownInterval = null,
@@ -282,45 +253,40 @@
     return r;
   }
 
-  function createRoom() {
+  async function createRoom() {
     playerName = document.getElementById("playerName").value.trim();
     if (!playerName) return showToast("⚠️ Enter your name!");
     maxRounds = parseInt(document.getElementById("roundsSelect").value);
 
-    const tryCreate = () => {
+    const tryCreate = async () => {
       roomID = makeRoomID();
-      db.ref("rooms/" + roomID).once("value").then(snap => {
-        if (snap.exists()) return tryCreate();
-        players = {}; players[playerName] = true;
-        points = {}; points[playerName] = 0;
-        db.ref("rooms/" + roomID).set({
-          players, points, roundNumber:0, maxRounds, gameStarted:false, votes:{}, revealed:null
-        }).then(() => {
-          showToast("✅ Room created!");
-          initAfterJoin();
-        });
+      const snap = await get(ref(db, "rooms/" + roomID));
+      if (snap.exists()) return tryCreate();
+      players = {}; players[playerName] = true;
+      points = {}; points[playerName] = 0;
+      await set(ref(db, "rooms/" + roomID), {
+        players, points, roundNumber:0, maxRounds, gameStarted:false, votes:{}, revealed:null
       });
+      showToast("✅ Room created!");
+      initAfterJoin();
     };
     tryCreate();
   }
 
-  function joinRoom() {
+  async function joinRoom() {
     playerName = document.getElementById("playerName").value.trim();
     if (!playerName) return showToast("⚠️ Enter your name!");
     roomID = document.getElementById("roomIDInput").value.trim().toUpperCase();
-    db.ref("rooms/" + roomID + "/players").once("value").then(snap => {
-      if (!snap.exists()) return showToast("❌ Room not found!");
-      players = snap.val();
-      players[playerName] = true;
-      db.ref("rooms/" + roomID).once("value").then(data => {
-        points = data.val().points || {};
-        points[playerName] = points[playerName] || 0;
-        db.ref("rooms/" + roomID).update({players, points}).then(() => {
-          showToast("✅ Joined successfully!");
-          initAfterJoin();
-        });
-      });
-    });
+    const snap = await get(ref(db, "rooms/" + roomID + "/players"));
+    if (!snap.exists()) return showToast("❌ Room not found!");
+    players = snap.val();
+    players[playerName] = true;
+    const roomSnap = await get(ref(db, "rooms/" + roomID));
+    points = roomSnap.val().points || {};
+    points[playerName] = points[playerName] || 0;
+    await update(ref(db, "rooms/" + roomID), {players, points});
+    showToast("✅ Joined successfully!");
+    initAfterJoin();
   }
 
   function initAfterJoin() {
@@ -330,7 +296,7 @@
   }
 
   function listenRoom() {
-    db.ref("rooms/" + roomID).on("value", snap => {
+    onValue(ref(db, "rooms/" + roomID), (snap) => {
       const d = snap.val();
       if (!d) return;
       players = d.players || {};
@@ -382,7 +348,7 @@
     }
   }
 
-  function startRound() {
+  async function startRound() {
     if(Object.keys(players).length < 3) {
       return showToast("⚠️ Need at least 3 players!");
     }
@@ -392,7 +358,7 @@
     const li = Object.keys(players)[Math.floor(Math.random()*Object.keys(players).length)];
     const q = questions[Math.floor(Math.random()*questions.length)];
 
-    db.ref("rooms/" + roomID).update({
+    await update(ref(db, "rooms/" + roomID), {
       gameStarted: true,
       roundNumber: rn,
       question: q,
@@ -438,11 +404,11 @@
     tick();
   }
 
-  function vote(who){
+  async function vote(who){
     if(myVote) return;
     myVote = who;
     votes[who] = (votes[who]||0)+1;
-    db.ref("rooms/"+roomID+"/votes").set(votes);
+    await set(ref(db,"rooms/"+roomID+"/votes"), votes);
     showToast("✅ Voted for " + who);
 
     for(let p in players){
@@ -451,47 +417,46 @@
     }
   }
 
-  function revealLiar(){
+  async function revealLiar(){
     clearTimeout(voteTimer);
     clearInterval(countdownInterval);
 
-    db.ref("rooms/"+roomID).once("value").then(snap=>{
-      const d = snap.val();
-      const v = d.votes || {};
-      const liar = d.liar;
-      let most = null, mx=0;
-      for(let p in v){
-        if(v[p]>mx){
-          mx = v[p];
-          most = p;
-        }
+    const snap = await get(ref(db,"rooms/"+roomID));
+    const d = snap.val();
+    const v = d.votes || {};
+    const liar = d.liar;
+    let most = null, mx=0;
+    for(let p in v){
+      if(v[p]>mx){
+        mx = v[p];
+        most = p;
       }
-      const success = most === liar;
-      const pts = {...d.points};
-      if(success){
-        for(let p in v)
-          if(v[p]>0) pts[p] = (pts[p]||0)+1;
-      } else {
-        pts[liar] = (pts[liar]||0)+2;
-      }
-      const res = {liar, most, success};
+    }
+    const success = most === liar;
+    const pts = {...d.points};
+    if(success){
+      for(let p in v)
+        if(v[p]>0) pts[p] = (pts[p]||0)+1;
+    } else {
+      pts[liar] = (pts[liar]||0)+2;
+    }
+    const res = {liar, most, success};
 
-      db.ref("rooms/"+roomID).update({
-        revealed: res,
-        points: pts,
-        gameStarted: false,
-      });
-
-      showResult(res);
-
-      setTimeout(()=>{
-        if(roundNumber < maxRounds){
-          startRound();
-        } else {
-          announceWinner();
-        }
-      }, 5000);
+    await update(ref(db,"rooms/"+roomID), {
+      revealed: res,
+      points: pts,
+      gameStarted: false,
     });
+
+    showResult(res);
+
+    setTimeout(()=>{
+      if(roundNumber < maxRounds){
+        startRound();
+      } else {
+        announceWinner();
+      }
+    }, 5000);
   }
 
   function showResult(res){
@@ -538,21 +503,12 @@
     showToast("🔗 Invitation link copied!");
   }
 
-  // تغيير إطار اللعبة حسب نوع الجهاز (هاتف / كمبيوتر)
   window.onload = () => {
+    document.getElementById("btnCreateRoom").onclick = createRoom;
+    document.getElementById("btnJoinRoom").onclick = joinRoom;
     document.getElementById("btnStart").onclick = startRound;
     const hash = location.hash.substring(1);
     if(hash) document.getElementById("roomIDInput").value = hash;
-
-    const overlay = document.getElementById("overlay");
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobile) {
-      overlay.style.border = "5px solid #28a745"; // أخضر للهاتف
-      overlay.style.boxShadow = "0 0 20px #28a745";
-    } else {
-      overlay.style.border = "5px solid #007bff"; // أزرق للكمبيوتر
-      overlay.style.boxShadow = "0 0 20px #007bff";
-    }
   };
 </script>
 </body>
